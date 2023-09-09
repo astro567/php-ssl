@@ -1,0 +1,60 @@
+version: '3.1'
+
+services:
+
+  web:
+    build: 
+      context: .
+      dockerfile: ./server/conf/apache/Dockerfile
+    restart: unless-stopped
+    ports:
+      - ${PORT}:80
+      - ${PORT_SSL}:443
+    env_file:
+      - .env
+    environment:
+      HOST: $HOST
+      PORT: $PORT
+      PORT_SSL: $PORT_SSL 
+    depends_on:
+      - db
+    volumes:
+      - ./app:/var/www/html
+      - ./server/conf/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+      - ./server/conf/apache/domain.dev.conf:/etc/apache2/sites-available/domain.dev.conf
+      - ./server/conf/certs/domain.dev.pem:/etc/ssl/certs/domain.dev.pem
+      - ./server/conf/certs/domain.dev-key.pem:/etc/ssl/private/domain.dev-key.pem
+    networks:
+      - server
+
+  db:
+    image: mysql:5.7
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: $DB_NAME
+      MYSQL_USER: $DB_USER
+      MYSQL_PASSWORD: $DB_PASSWORD
+      MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+    volumes:
+      - ./server/db:/var/lib/mysql
+    networks:
+      - server
+  pma:
+    image: phpmyadmin
+    restart: always
+    ports:
+      - 9000:80
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+    networks:
+      - server
+
+volumes:
+  db:
+
+networks:
+  server:
